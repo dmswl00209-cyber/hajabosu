@@ -7,12 +7,12 @@ import pandas as pd
 import streamlit as st
 
 import ai
+import db
 import rules
 import run
 
 BASE = Path(__file__).parent
 접수함 = BASE / "data" / "접수함"
-대장경로 = BASE / "data" / "하자대장.csv"
 
 st.set_page_config(page_title="하자보수 도구", layout="wide")
 st.title("하자보수 도구")
@@ -20,9 +20,8 @@ st.caption("접수 원문 → AI가 읽기 → 코드가 계산·판정 → 하�
 
 
 def 대장_읽기() -> pd.DataFrame | None:
-    if not 대장경로.exists():
-        return None
-    return pd.read_csv(대장경로, encoding="utf-8-sig", dtype=str).fillna("")
+    행들 = db.대장_읽기()
+    return pd.DataFrame(행들, columns=db.대장_칸) if 행들 else None
 
 
 tab과정, tab대장, tab구분 = st.tabs(["처리 과정", "하자대장", "AI·코드·사람 구분"])
@@ -97,14 +96,14 @@ with tab과정:
 
 # ───────────────────────── 하자대장 ─────────────────────────
 with tab대장:
-    st.caption("접수함 전체를 처리해 data/하자대장.csv로 저장합니다. 실행할 때마다 파일을 새로 씁니다.")
+    st.caption("접수함 전체를 처리해 DB 하자대장에 저장합니다. 접수번호가 같으면 덮어씁니다.")
     if st.button("접수함 전체 다시 처리"):
         with st.spinner("7건 처리 중..."):
             코드 = run.main()
         (st.success if 코드 == 0 else st.error)("처리 완료" if 코드 == 0 else "일부 건이 실패했습니다.")
     df = 대장_읽기()
     if df is None:
-        st.info("아직 하자대장.csv가 없습니다. 위 버튼으로 만드세요.")
+        st.info("하자대장에 아직 건이 없습니다. 위 버튼으로 만드세요.")
     else:
         확인 = (df["상태"] == "확인필요").sum()
         긴급수 = (df["긴급도"] == "긴급").sum()

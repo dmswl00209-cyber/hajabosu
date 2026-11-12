@@ -1,20 +1,16 @@
-"""접수함 폴더의 원문을 모두 처리해 하자대장 CSV로 저장한다.
-흐름: 원문 -> ai.접수정리(AI가 읽는 칸) -> rules(번호·기한·판정) -> CSV"""
-import csv
+"""접수함 폴더의 원문을 모두 처리해 하자대장(DB)에 저장한다.
+흐름: 원문 -> ai.접수정리(AI가 읽는 칸) -> rules(번호·기한·판정) -> db.대장_저장"""
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
 import ai
+import db
 import rules
 
 BASE = Path(__file__).parent
 접수함 = BASE / "data" / "접수함"
-출력 = BASE / "data" / "하자대장.csv"
-
-칸 = ["접수번호", "접수일", "원문파일", "위치", "공종", "하자내용", "긴급도", "조치기한",
-      "공사번호", "시공업체", "준공일", "보증만료일", "보증판정", "책임구분", "상태", "비고"]
 
 
 def 파일명_날짜(파일명: str) -> str | None:
@@ -57,12 +53,9 @@ def main() -> int:
             실패.append((파일.name, e))
             print(f"실패: {파일.name}  {type(e).__name__}: {e}")
 
-    with open(출력, "w", encoding="utf-8-sig", newline="") as f:  # utf-8-sig: 엑셀에서 한글이 깨지지 않게
-        w = csv.DictWriter(f, fieldnames=칸)
-        w.writeheader()
-        w.writerows(행들)
+    db.대장_저장(행들)  # 접수번호가 같으면 덮어쓴다
 
-    print(f"\n{len(행들)}건 저장 -> {출력}" + (f" / 실패 {len(실패)}건" if 실패 else ""))
+    print(f"\n{len(행들)}건 저장 -> DB 하자대장" + (f" / 실패 {len(실패)}건" if 실패 else ""))
     return 1 if 실패 else 0
 
 
