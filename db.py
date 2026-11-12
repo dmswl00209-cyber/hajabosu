@@ -112,6 +112,33 @@ def 대장_읽기() -> list[dict]:
     return [{c: 글(v) for c, v in zip(대장_칸, r)} for r in rows]
 
 
+def 접수_저장(발견일, 접수자: str, 부서: str, 위치: str, 내용: str) -> int:
+    """접수 화면에서 들어온 1건을 접수 테이블에 넣고 id를 돌려준다. 처리상태는 미처리로 시작."""
+    with engine().begin() as conn:
+        return conn.execute(
+            text('INSERT INTO "접수" ("발견일", "접수자", "부서", "위치", "내용") '
+                 'VALUES (:발견일, :접수자, :부서, :위치, :내용) RETURNING "id"'),
+            {"발견일": 발견일, "접수자": 접수자, "부서": 부서, "위치": 위치, "내용": 내용},
+        ).scalar_one()
+
+
+def 접수_미처리() -> list[dict]:
+    """처리상태가 미처리인 접수를 들어온 순서대로."""
+    with engine().connect() as conn:
+        rows = conn.execute(text(
+            'SELECT "id", "접수일시", "발견일", "접수자", "부서", "위치", "내용" '
+            'FROM "접수" WHERE "처리상태" = \'미처리\' ORDER BY "id"')).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def 접수_처리완료(접수id: int, 접수번호: str) -> None:
+    """하자대장에 옮긴 접수를 처리완료로 바꾸고 접수번호를 적는다."""
+    with engine().begin() as conn:
+        conn.execute(
+            text('UPDATE "접수" SET "처리상태" = \'처리완료\', "접수번호" = :번호 WHERE "id" = :id'),
+            {"번호": 접수번호, "id": 접수id})
+
+
 def 건수() -> dict:
     """테이블별 건수."""
     with engine().connect() as conn:
